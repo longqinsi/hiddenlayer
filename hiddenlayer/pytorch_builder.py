@@ -68,18 +68,36 @@ def import_graph(hl_graph, model, args, input_names=None, verbose=False):
 
     # Run the Pytorch graph to get a trace and generate a graph from it
     trace, out = torch.jit._get_trace_graph(model, args)
-    torch_graph = torch.onnx._optimize_trace(trace, torch.onnx.OperatorExportTypes.ONNX)
+    ### modified by longqinsi 2023/05/12 适配PyTorch 2.0.1
+    # torch_graph = torch.onnx._optimize_trace(trace, torch.onnx.OperatorExportTypes.ONNX)
+    torch_graph = torch.onnx._optimize_graph(trace, torch.onnx.OperatorExportTypes.ONNX)
+    ### end modified
 
     # Dump list of nodes (DEBUG only)
     if verbose:
         dump_pytorch_graph(torch_graph)
 
+    params = {}
     # Loop through nodes and build HL graph
     for torch_node in torch_graph.nodes():
         # Op
         op = torch_node.kind()
+        print("torch_node.kind(): " + op)
         # Parameters
-        params = {k: torch_node[k] for k in torch_node.attributeNames()} 
+        if op == 'onnx::Gemm':
+            import re
+            params_str = re.search(r'(?<=onnx::Gemm\[)[^\[\]]+', str(torch_node)).group()
+            print("onnx::Gemm[" + params_str + "]")
+            for item in params_str.split(','):
+                k, v = item.split('=')
+                k = k.strip()
+                v = v.strip()
+                if k in ['alpha', 'beta']:
+                    params[k] = float(v)
+                elif k in ['transB']:
+                    params[k] = int(v)
+
+        # params = {k: torch_node[k] for k in torch_node.attributeNames()}
         # Inputs/outputs
         # TODO: inputs = [i.unique() for i in node.inputs()]
         outputs = [o.unique() for o in torch_node.outputs()]

@@ -356,8 +356,9 @@ class Graph():
 
     def _repr_svg_(self):
         """Allows Jupyter notebook to render the graph automatically."""
-        return self.build_dot()._repr_svg_()
-    
+        return self.build_dot()._repr_image_svg_xml()
+        # return dot._repr_svg_()
+
     def save(self, path, format="pdf"):
         # TODO: assert on acceptable format values
         dot = self.build_dot()
