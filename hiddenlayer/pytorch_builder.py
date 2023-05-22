@@ -82,12 +82,10 @@ def import_graph(hl_graph, model, args, input_names=None, verbose=False):
     for torch_node in torch_graph.nodes():
         # Op
         op = torch_node.kind()
-        print("torch_node.kind(): " + op)
         # Parameters
         if op == 'onnx::Gemm':
             import re
             params_str = re.search(r'(?<=onnx::Gemm\[)[^\[\]]+', str(torch_node)).group()
-            print("onnx::Gemm[" + params_str + "]")
             for item in params_str.split(','):
                 k, v = item.split('=')
                 k = k.strip()
